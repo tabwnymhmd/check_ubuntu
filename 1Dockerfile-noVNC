@@ -1,0 +1,66 @@
+# liuweipeng/dl:cuda11.1-novnc
+FROM liuweipeng/dl:cuda11.1
+
+# ENV DEBIAN_FRONTEND noninteractive
+# ENV USER ubuntu
+# ENV HOME /home/$USER
+
+# Create new user for vnc login.
+# RUN adduser $USER --disabled-password
+# Install Ubuntu Unity.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        ubuntu-desktop \
+        unity-lens-applications \
+        gnome-panel \
+        metacity \
+        nautilus \
+        gedit \
+        xterm \
+        sudo
+
+# Install dependency components.
+RUN apt-get install -y \
+        supervisor \
+        net-tools \
+#        python3-tk \
+        python3.9-tk \
+        pwgen \
+        libtasn1-3-bin \
+        libglu1-mesa \
+        eog  # 看图软件
+RUN apt-get autoclean \
+    && apt-get autoremove \
+    && rm -rf /var/lib/apt/lists/*
+
+# copy vnc
+COPY tigervnc.tar.gz /tmp/tigervnc.tar.gz
+COPY noVNC.tar.gz /tmp/noVNC.tar.gz
+RUN tar -xf /tmp/tigervnc.tar.gz -C /  && tar -xf /tmp/noVNC.tar.gz -C $HOME/
+
+# Clone noVNC.
+# RUN git clone https://github.com/novnc/noVNC.git $HOME/noVNC
+# COPY noVNC $HOME/noVNC
+
+# Clone websockify for noVNC
+# Run git clone https://github.com/kanaka/websockify $HOME/noVNC/utils/websockify
+
+# Download ngrok.
+# ADD https://bin.equinox.io/c/4VmDzA7iaHb/ngrok-stable-linux-amd64.zip $HOME/ngrok/ngrok.zip
+# RUN unzip -o $HOME/ngrok/ngrok.zip -d $HOME/ngrok && rm $HOME/ngrok/ngrok.zip
+
+# Copy supervisor config
+COPY supervisor.conf /etc/supervisor/conf.d/
+
+# Set xsession of Unity
+COPY xsession $HOME/.xsession
+
+# Copy startup script,修复了无法修改密码的问题
+COPY startup.sh $HOME
+
+# 定期重启unity以防gpu占用过高
+COPY restartunity $HOME/restartunity
+
+
+EXPOSE 6080 5901 4040
+CMD ["/bin/bash", "/home/ubuntu/startup.sh"]
